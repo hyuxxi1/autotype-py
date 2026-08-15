@@ -1,10 +1,30 @@
 import time
-import win32clipboard
-import win32con
 import pyautogui
 import keyboard
 
-# 한컴타자연습 실제 화면에 나오는 정확한 텍스트 목록 (이전과 동일)
+# 초성, 중성, 종성 2벌식 영문 자판 매핑
+CHOSUNG_LIST = ['r', 'R', 's', 'e', 'E', 'f', 'a', 'q', 'Q', 't', 'T', 'd', 'w', 'W', 'c', 'z', 'x', 'v', 'g']
+JUNGSUNG_LIST = ['k', 'o', 'i', 'O', 'j', 'p', 'u', 'P', 'h', 'hk', 'ho', 'hl', 'y', 'n', 'nj', 'np', 'nl', 'b', 'm', 'ml', 'l']
+JONGSUNG_LIST = ['', 'r', 'R', 'rt', 's', 'sw', 'sg', 'e', 'f', 'fr', 'fa', 'fq', 'ft', 'fx', 'fv', 'fg', 'a', 'q', 'qt', 't', 'T', 'd', 'w', 'c', 'z', 'x', 'v', 'g']
+
+def hangeul_to_keys(text):
+    """한글 문장을 2벌식 키보드 입력 스트링으로 분해 변환"""
+    res = []
+    for ch in text:
+        code = ord(ch)
+        if 0xAC00 <= code <= 0xD7A3:
+            s_index = code - 0xAC00
+            cho = s_index // (21 * 28)
+            jung = (s_index % (21 * 28)) // 28
+            jong = s_index % 28
+            res.append(CHOSUNG_LIST[cho])
+            res.append(JUNGSUNG_LIST[jung])
+            if jong != 0:
+                res.append(JONGSUNG_LIST[jong])
+        else:
+            res.append(ch)
+    return "".join(res)
+
 AEGUKGA_1ST = [
     "애국가",
     "1. 동해물과 백두산이 마르고 닳도록",
@@ -13,64 +33,44 @@ AEGUKGA_1ST = [
     "대한사람 대한으로 길이 보전하세."
 ]
 
-def set_clipboard(text):
-    """클립보드에 문자열 복사"""
-    win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, text)
-    win32clipboard.CloseClipboard()
-
 def run_macro(target_cpm=700):
-    """
-    한컴타자연습 애국가 1절 자동 입력 매크로 (강화된 붙여넣기 방식)
-    :param target_cpm: 목표 타수 (기본값 700타)
-    """
     print("=" * 50)
-    print(" 🚀 한컴타자연습 애국가 1절 자동 타이핑 매크로 (V2)")
+    print(" 🚀 한컴타자연습 실제 타이핑 매크로")
     print(f" 🎯 목표 타수: 약 {target_cpm} CPM")
     print(" ⚠️  [F8] 키를 누르면 시작됩니다.")
-    print(" ⚠️  [Esc] 키를 누르면 중단됩니다.")
+    print(" ⚠️  한컴타자연습 입력창이 [한글] 상태여야 합니다!")
     print("=" * 50)
 
-    # F8 키 입력 대기
+    # F8 대기
     keyboard.wait('f8')
     print("\n▶ 3초 후 시작합니다! 한컴타자연습 입력창을 클릭해 두세요.")
     time.sleep(3)
+
+    # 700타 기준 1타당 지연 시간 (60초 / target_cpm)
+    stroke_interval = 60.0 / target_cpm
 
     for idx, line in enumerate(AEGUKGA_1ST, start=1):
         if keyboard.is_pressed('esc'):
             print("\n🛑 매크로가 중단되었습니다.")
             break
 
-        # 클립보드로 문장 복사
-        set_clipboard(line)
-        time.sleep(0.05) # 클립보드 안정화 대기
-
-        # pyautogui.hotkey('ctrl', 'v') 대신 윈도우 메시지 직접 전송 (더 확실함)
-        # 윈도우 키 이벤트 메시지 WM_KEYDOWN (0x100), WM_KEYUP (0x101), WM_CHAR (0x102)
-        # Ctrl+V는 가상 키코드 VK_CONTROL (0x11) + 'V' (0x56) 입니다.
-        # 이 방식은 한영키 상태를 무시하고 강제 붙여넣기합니다.
+        # 한글 텍스트를 키보드 타수로 분해
+        keys = hangeul_to_keys(line)
         
-        pyautogui.keyDown('ctrl')
-        pyautogui.press('v', presses=1)
-        pyautogui.keyUp('ctrl')
+        # 실제 키 입력 진행
+        for char in keys:
+            if keyboard.is_pressed('esc'):
+                break
+            pyautogui.write(char)
+            time.sleep(stroke_interval)
 
-        time.sleep(0.05) # 입력 안정화 대기
-
-        # 엔터키 입력 (다음 줄로 이동)
+        # 줄 바꿈 (Enter)
         pyautogui.press('enter')
+        time.sleep(0.1)
 
-        # 700타 기준 지연 시간 계산 (한글/숫자/기호 타수 + 엔터)
-        total_strokes = len(line) * 2.5 + 1
-        delay = total_strokes / (target_cpm / 60.0)
+        print(f"[{idx}/{len(AEGUKGA_1ST)}] '{line}' 완료")
 
-        # delay 시간에서 붙여넣기 대기 시간을 차감
-        delay = max(0, delay - 0.1)
-
-        print(f"[{idx}/{len(AEGUKGA_1ST)}] 입력 완료: {line} (대기: {delay:.2f}초)")
-        time.sleep(delay)
-
-    print("\n✅ 모든 문장 입력 완료! 결과를 확인하세요.")
+    print("\n✅ 모든 문장 입력 완료!")
 
 if __name__ == "__main__":
     run_macro(target_cpm=700)
