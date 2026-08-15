@@ -4,12 +4,13 @@ import win32con
 import pyautogui
 import keyboard
 
-# 한컴타자연습 긴글연습 '애국가 1절' 텍스트
+# 한컴타자연습 실제 화면에 나오는 정확한 텍스트 목록
 AEGUKGA_1ST = [
-    "동해물과 백두산이 마르고 닳도록",
+    "애국가",
+    "1. 동해물과 백두산이 마르고 닳도록",
     "하느님이 보우하사 우리나라 만세",
     "무궁화 삼천리 화려강산",
-    "대한사람 대한으로 길이 보전하세"
+    "대한사람 대한으로 길이 보전하세."
 ]
 
 def set_clipboard(text):
@@ -46,17 +47,17 @@ def run_macro(target_cpm=700):
         pyautogui.hotkey('ctrl', 'v')
         time.sleep(0.05)
 
-        # 엔터키 입력
+        # 엔터키 입력 (다음 줄로 이동)
         pyautogui.press('enter')
 
-        # 700타 기준 지연 시간 계산 (한글 자모음 수 + 엔터)
+        # 700타 기준 지연 시간 계산 (한글/숫자/기호 타수 + 엔터)
         total_strokes = len(line) * 2.5 + 1
         delay = total_strokes / (target_cpm / 60.0)
 
         print(f"[{idx}/{len(AEGUKGA_1ST)}] 입력 완료: {line} (대기: {delay:.2f}초)")
         time.sleep(delay)
 
-    print("\n✅ 1절 입력 완료! 타수 결과를 확인하세요.")
+    print("\n✅ 모든 문장 입력 완료! 결과를 확인하세요.")
 
 if __name__ == "__main__":
     run_macro(target_cpm=700)
